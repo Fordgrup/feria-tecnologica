@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detector de Gas con Arduino <img src="https://upload.wikimedia.org/wikipedia/commons/0/0d/Arduino_Logo.svg" alt="Arduino" style="height: 24px; vertical-align: middle; margin-left: 10px;"></title> <!-- Título con imagen de Arduino -->
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(255, 0, 0, 0.6)); /* Fondo negro difuminado en rojo */
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #fdd835; /* Color dorado */
+        }
+        p {
+            font-size: 1.2rem;
+            margin: 10px 0;
+            text-align: center;
+            max-width: 600px;
+        }
+        /* Contenedor del medidor */
+        .circle-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px 0;
+        }
+        .circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                #e63946 0% 50%, 
+                #f1faee 50% 100%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333; /* Números en color negro para visibilidad */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+        .status {
+            margin-top: 20px;
+            font-size: 1.5rem;
+        }
+        /* Botones */
+        button, a {
+            padding: 10px 20px;
+            background: #e63946;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 1rem;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin: 10px;
+        }
+        button:hover, a:hover {
+            background: #d62828;
+        }
+        .notification {
+            display: none;
+            background-color: #ff3d00;
+            color: white;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Detector de Gas con Arduino</h1>
+    <p>
+        Este proyecto utiliza un sensor MQ-2 para detectar niveles de gas en el ambiente.
+        Si el nivel supera los 525 ppm, se envía una alerta de peligro.
+    </p>
+    
+    <!-- Notificación de alerta -->
+    <div class="notification" id="notification">¡Peligro! Nivel de gas muy alto.</div>
+    
+    <!-- Medidor circular -->
+    <div class="circle-container">
+        <div class="circle" id="gas-level"> <h1>0</h1> </div>
+    </div>
+    
+    <div class="status" id="status">Nivel de gas: Seguro</div>
+    
+    <!-- Botón para prueba de notificación -->
+    <button id="simulate">Simular Gas Alto</button>
+    
+    <!-- Enlace a la página del historial -->
+    <a href="feria2.html" id="go-to-history">Ver Historial de Gas</a>
+    
+    <script>
+        // Variables simuladas
+        let gasLevel = 0;
+        
+        // Referencias a elementos de la página
+        const gasLevelEl = document.getElementById('gas-level');
+        const statusEl = document.getElementById('status');
+        const notificationEl = document.getElementById('notification');
+        const simulateBtn = document.getElementById('simulate');
+        
+        // Función para actualizar el medidor circular
+        function updateGauge(level) {
+            const percentage = Math.min(level / 1000, 1) * 100; // Normalizar a 100%
+            gasLevelEl.textContent = level; // Mostrar nivel numérico
+            gasLevelEl.style.background = `conic-gradient(
+                #e63946 ${percentage}%, 
+                #f1faee ${percentage}% 100%
+            )`;
+            
+            // Cambiar estado según el nivel de gas
+            if (level > 525) {
+                statusEl.textContent = 'Nivel de gas: Peligro';
+                statusEl.style.color = '#e63946'; // Rojo para peligro
+                showNotification('¡Peligro! Nivel de gas muy alto.');
+                changeTitleToArduino();
+            } else {
+                statusEl.textContent = 'Nivel de gas: Seguro';
+                statusEl.style.color = '#fff';
+                resetTitle();
+            }
+        }
+        
+        // Función para mostrar la notificación
+        function showNotification(message) {
+            notificationEl.innerText = message;
+            notificationEl.style.display = 'block';
+            setTimeout(() => {
+                notificationEl.style.display = 'none';
+            }, 5000); // Ocultar después de 5 segundos
+            // Enviar notificación del navegador
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(message);
+            } else if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification(message);
+                    }
+                });
+            }
+        }
+
+        // Función para cambiar el título de la página con la imagen de Arduino
+        function changeTitleToArduino() {
+            document.title = "Nivel de gas muy alto - ¡Peligro! <img src='https://upload.wikimedia.org/wikipedia/commons/0/0d/Arduino_Logo.svg' alt='Arduino' style='height: 24px; vertical-align: middle; margin-left: 10px;'>";
+        }
+
+        // Función para resetear el título de la página
+        function resetTitle() {
+            document.title = "Detector de Gas con Arduino <img src='https://upload.wikimedia.org/wikipedia/commons/0/0d/Arduino_Logo.svg' alt='Arduino' style='height: 24px; vertical-align: middle; margin-left: 10px;'>";
+        }
+
+        // Simular nivel alto de gas al presionar el botón
+        simulateBtn.addEventListener('click', () => {
+            gasLevel = Math.floor(Math.random() * 300) + 525; // Simular entre 525 y 825
+            updateGauge(gasLevel);
+        });
+
+        // Actualizar medidor periódicamente (simulación)
+        setInterval(() => {
+            gasLevel = Math.floor(Math.random() * 500); // Simular entre 0 y 500
+            updateGauge(gasLevel);
+        }, 3000);
+    </script>
+</body>
+</html>
